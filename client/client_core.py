@@ -4,10 +4,11 @@ import json
 import socket
 import pickle
 import subprocess
+from time import sleep
 
 from keymanager import KeyManager
-from utxo_manager import UTXOManager
-from transaction import *
+from transaction.utxo_manager import UTXOManager
+from transaction.transactions import *
 from blockchain.block_builder import BlockBuilder
 from blockchain.blockchain_manager_4client import BlockchainManager
 from connection_manager_4client import ConnectionManager4Client
@@ -16,6 +17,8 @@ from message_manager import (
     MSG_NEW_TRANSACTION,
     MSG_REQUEST_FULL_CHAIN,
     RSP_FULL_CHAIN,
+    MSG_REQUEST_LOG,
+    RSP_LOG,
 )
 
 class ClientCore:
@@ -98,23 +101,38 @@ class ClientCore:
     def update_balance(self):
         return self.um.get_balance()
 
+    def log(self):
+        print("MSG_REQUEST_LOG is sending")
+        peer, msg = self.cm.get_message_text(MSG_REQUEST_LOG)
+        self.cm.send_msg(peer, msg)
+
     def update_chain(self):
         print("update my blockchain")
         peer, msg = self.cm.get_message_text(MSG_REQUEST_FULL_CHAIN)
         self.cm.send_msg(peer, msg)
 
     def get_my_blockchain(self):
-        chain = self.bm.get_my_blockchain()
-        print(chain)
+        self.bm.get_my_blockchain()
 
     def __handle_message(self, msg):
+        # msg -> [result, sender, reason, cmd, payload]
         if msg[3] == RSP_FULL_CHAIN:
-            new_blockchain = pickle.loads(msg[4].encode())
-            result, pool_4_orphan_blocks = self.bm.resolve_conflicts(new_blockchain)
-            if result is not None:
-                self.previous_hash = result
+            new_blockchain = json.loads(msg[4])
+            print(json.dumps(new_blockchain, indent = 4))
+            if msg[4] is not None:
+                result, pool_4_orphan_blocks = self.bm.resolve_conflicts(new_blockchain)
+                if result is not None:
+                    self.previous_hash = result
+                else:
+                    print("Received blockchain is useless...")
             else:
-                print("Received blockchain is useless...")
+                print("payload is None...")
+
+        elif msg[3] == RSP_LOG:
+            print("Server's log: \n", msg[4])
+
+        else:
+            print("Unknown command")
 
     def update_callback(self):
         print("update_callback was called")
@@ -126,12 +144,13 @@ class ClientCore:
 def main():
     client = ClientCore()
     balance = client.update_balance()
-    cmd_list = ["exit", "tx", "upbc", "chain"]
+    cmd_list = ["exit", "tx", "log", "upbc", "chain"]
     while True:
         print("\nPlease enter the 'command' following down")
         print("""
 'exit': stop this client node
 'tx': make transaction
+'log': show server's log connected with this node
 'upbc': update my blockchain
 'chain': show blockchain this node has""")
         print("My Balance is: {0}".format(balance))
@@ -144,8 +163,12 @@ def main():
                 client.make_transaction()
                 balance = client.update_balance()
                 continue
+            elif cmd == "log":
+                client.log()
+                continue
             elif cmd == "upbc":
                 client.update_chain()
+                sleep(1)
                 balance = client.update_callback()
                 continue
             elif cmd == "chain":

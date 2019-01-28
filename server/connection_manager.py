@@ -17,6 +17,8 @@ from message_manager import (
     MSG_NEW_BLOCK,
     MSG_REQUEST_FULL_CHAIN,
     RSP_FULL_CHAIN,
+    MSG_REQUEST_LOG,
+    RSP_LOG,
     ERR_PROTOCOL_UNMATCH,
     ERR_VERSION_UNMATCH,
     OK_WITH_PAYLOAD,
@@ -24,14 +26,11 @@ from message_manager import (
     MSG_TEST,
 )
 
-port_num = 50000
-
 class ConnectionManager:
     def __init__(self, name, callback):
         self.name = name
         with open('/usr/local/server/neighbour_server_{0}.txt'.format(self.name), 'r') as f:
             texta = f.read()
-
         arg = "ls /usr/local/server".split()
         check_list = subprocess.check_output(arg).decode().split()
         if "neighbour_client_{0}.txt".format(self.name) in check_list:
@@ -57,11 +56,6 @@ class ConnectionManager:
             socket = threading.Thread(target = Socket, args = (i[0], int(i[1]), self.__handle_message))
             socket.start()
 
-    def get_message_text_test(self, recipient, msg_type, payload = None):
-        peer = tuple(self.server_node[recipient])
-        msg = self.mm.build(self.name, msg_type, payload)
-        return peer, msg
-
     def get_message_text(self, msg_type, payload = None):
         msg = self.mm.build(self.name, msg_type, payload)
         return msg
@@ -84,21 +78,6 @@ class ConnectionManager:
         except OSError:
             with open("/usr/local/server/log.txt", "a") as f:
                 f.write("\nSend msg failed")
-
-    ###
-    #def __ip_list(self):
-        ### d = {'my_interface': 'my_ip'}
-        #d = {}
-        #interface = netifaces.interfaces()
-        #epair_list = [i for i in interface if re.match("epair", i)]
-        #with open("/usr/local/server/log.txt", "a") as f:
-        #    f.write("\nepair list: {0}".format(epair_list))
-        #for i in epair_list:
-        #    addrs = netifaces.ifaddresses(i)
-        #    ip = addrs[2][0]['addr']
-        #    d[i] = ip
-        #return d
-    ###
 
     def __handle_message(self, params):
         soc, addr, data_sum = params
@@ -124,12 +103,16 @@ class ConnectionManager:
                 f.write("\nError: Protocol version is not matched")
             return
         elif status == ("OK", OK_WITHOUT_PAYLOAD):
-            return
+            if re.match("server", sender):
+                for i in self.server_node:
+                    if i == sender:
+                        peer = tuple(self.server_node[i])
+            elif re.match("client", sender):
+                for i in self.client_node:
+                    if i == sender:
+                        peer = tuple(self.client_node[i])
+            self.callback((result, sender, reason, cmd, payload), peer)
         elif status == ("OK", OK_WITH_PAYLOAD):
-            if cmd == MSG_TEST:
-                with open("/usr/local/server/log.txt", "a") as f:
-                    f.write("\nThis is TEST")
-
             self.callback((result, sender, reason, cmd, payload))
         else:
             with open("/usr/local/server/log.txt", "a") as f:

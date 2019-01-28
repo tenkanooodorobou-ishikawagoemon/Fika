@@ -56,7 +56,7 @@ class TransactionPool:
         with self.lock:
             self.transactions = transactions
             with open("/usr/local/server/log.txt", "a") as f:
-                f.write("transaction pool will be renewed...")
+                f.write("\ntransaction pool will be renewed...")
 
     def has_this_output_in_my_tp(self, transaction_output):
         with open("/usr/local/server/log.txt", "a") as f:

@@ -94,6 +94,9 @@ class Operator:
             if "neighbour_client_{0}.txt".format(s) in check:
                 arg3 = "mv neighbour_client_{0}.txt /jails/{0}/usr/local/server".format(s).split()
                 subprocess.run(arg3)
+            arg4 = "jexec {0} python3.6 /usr/local/server/server_core.py".format(s).split()
+            subprocess.Popen(arg4)
+            print("{0} start!!".format(s))
 
     def startclient(self):
         key_list = json.dumps(self.client_pubkey)
@@ -107,3 +110,4 @@ class Operator:
             subprocess.run(arg2)
             arg3 = "cp key_list.txt /jails/{0}/usr/local/client".format(c).split()
             subprocess.run(arg3)
+            print("{0} start!!".format(c))

@@ -20,7 +20,7 @@ class Block:
     def to_dict(self, nonce = True):
         d = {
         "timestamp": self.timestamp,
-        "transaction": json.dumps(self.transaction),
+        "transactions": self.transaction,
         "previous_hash": self.previous_hash,
         }
         if nonce:
@@ -49,7 +49,7 @@ class GenesisBlock(Block):
 
     def to_dict(self, nonce = True):
         d = {
-        "transaction": self.transaction,
+        "transactions": self.transaction,
         "genesis_block": True,
         }
         if nonce:

@@ -10,6 +10,8 @@ MSG_NEW_TRANSACTION = "NEW_TRANSACTION"
 MSG_NEW_BLOCK = "NEW_BLOCK"
 MSG_REQUEST_FULL_CHAIN = "REQUEST_FULL_CHAIN"
 RSP_FULL_CHAIN = "RSP_FULL_CHAIN"
+MSG_REQUEST_LOG = "REQUEST_LOG"
+RSP_LOG = "RSP_LOG"
 MSG_TEST = "TEST"
 
 ERR_PROTOCOL_UNMATCH = 0
@@ -33,14 +35,14 @@ class MessageManager:
         if payload is not None:
             message["payload"] = payload
 
-        return_message = json.dumps(message, indent = 4)
-        print(return_message)
+        return_message = json.dumps(message)
+        print(json.dumps(message, indent = 4))
         return return_message
 
     def parse(self, msg):
         msg = json.loads(msg)
         print("Received a Message")
-        print(json.dumps(msg, indent = 4))
+        #print(json.dumps(msg, indent = 4))
         msg_ver = StrictVersion(msg["version"])
         cmd = msg.get("msg_type")
         sender = msg.get("sender")
@@ -49,7 +51,7 @@ class MessageManager:
             return ("ERROR", ERR_PROTOCOL_UNMATCH, None, None, None)
         elif msg_ver > StrictVersion(VERSION):
             return ("ERROR", ERR_VERSION_UNMATCH, None, None, None)
-        elif cmd in (MSG_NEW_TRANSACTION, MSG_NEW_BLOCK, RSP_FULL_CHAIN, MSG_TEST):
+        elif cmd in (MSG_NEW_TRANSACTION, MSG_NEW_BLOCK, RSP_FULL_CHAIN, RSP_LOG, MSG_TEST):
             result_type = OK_WITH_PAYLOAD
             return("OK", sender, result_type, cmd, payload)
         else:

@@ -22,6 +22,8 @@ from message_manager import (
     MSG_NEW_BLOCK,
     MSG_REQUEST_FULL_CHAIN,
     RSP_FULL_CHAIN,
+    MSG_REQUEST_LOG,
+    RSP_LOG,
     MSG_TEST,
 )
 
@@ -36,14 +38,12 @@ class ServerCore:
         self.cm = ConnectionManager(self.name, self.__handle_message)
         self.cm.start()
         self.bb = BlockBuilder()
-        self.flag_stop_block_build = False
-        self.is_bb_running = False
-        my_genesis_block = self.bb.generate_genesis_block()
-        self.bm = BlockchainManager(my_genesis_block.to_dict())
-        self.previous_hash = self.bm.get_hash(my_genesis_block.to_dict())
+        genesis_block = self.bb.generate_genesis_block()
+        self.bm = BlockchainManager(genesis_block.to_dict())
+        self.previous_hash = self.bm.get_hash(genesis_block.to_dict())
         self.tp = TransactionPool()
 
-        self.flag_stop_block_build = False
+        self.flag_stop_mining = False
         self.bb_running = False
         self.km = KeyManager(self.name)
         self.um = UTXOManager(self.km.my_address())
@@ -51,7 +51,7 @@ class ServerCore:
         self.start_block_building()
 
     def start_block_building(self):
-        self.bb_timer = threading.Timer(CHECK_INTERVAL, self.__generate_block_with_tp)
+        self.bb_timer = threading.Timer(CHECK_INTERVAL, self.__block_mining)
         self.bb_timer.start()
 
     def double_spending(self, transaction):
@@ -150,7 +150,7 @@ class ServerCore:
         return True
 
 
-    def __handle_message(self, msg):
+    def __handle_message(self, msg, peer = None):
         # msg -> (result, sender, reason, cmd, payload)
         if msg[3] == MSG_NEW_TRANSACTION:
             new_transaction = json.loads(msg[4])
@@ -184,14 +184,23 @@ class ServerCore:
             new_block = json.loads(msg[4])
             if self.bm.is_valid_block(self.previous_hash, new_block):
                 if self.bb_running:
-                    self.flag_stop_block_build = True
+                    self.flag_stop_mining = True
                 self.previous_hash = self.bm.get_hash(new_block)
                 self.bm.set_new_block(new_block)
                 result = self.tp.get_stored_transactions()
                 new_tp = self.bm.remove_used_tx(result)
                 self.tp.renew_my_transactions(new_tp)
+                new_message = self.cm.get_message_text(MSG_NEW_BLOCK, json.dumps(new_block))
+                self.cm.send_all(new_message, msg[1])
+
+        elif msg[3] == MSG_REQUEST_FULL_CHAIN:
+            mychain = self.bm.get_my_blockchain()
+            data = json.dumps(mychain)
+            new_message = self.cm.get_message_text(RSP_FULL_CHAIN, data)
+            self.cm.send_msg(peer, new_message)
 
         elif msg[3] == RSP_FULL_CHAIN:
+            # pickle -> json
             new_blockchain = pickle.loads(msg[4].encode())
             with open("/usr/local/server/log.txt", "a") as f:
                 f.write("\nnew_blockchain")
@@ -208,18 +217,24 @@ class ServerCore:
                 with open("/usr/local/server/log.txt", "a") as f:
                     f.write("\nReceived blockchain in useless...")
 
+        elif msg[3] == MSG_REQUEST_LOG:
+            with open("/usr/local/server/log.txt", "r") as f:
+                log = f.read()
+            new_message = self.cm.get_message_text(RSP_LOG, log)
+            self.cm.send_msg(peer, new_message)
+
         elif msg[3] == MSG_TEST:
             with open("/usr/local/server/log.txt", "a") as f:
                 f.write("\nServerCore received test message")
             new_message = self.cm.get_message_text(msg[3], msg[4])
             self.cm.send_all(new_message, msg[1])
 
-    def __generate_block_with_tp(self):
+    def __block_mining(self):
         with open("/usr/local/server/log.txt", "a") as f:
-            f.write("\ngenerate_block_with_tp was called")
+            f.write("\nBlock Mining start!!")
 
-        while self.flag_stop_block_build is False:
-            self.is_bb_running = True
+        while self.flag_stop_mining is False:
+            self.bb_running = True
             previous_hash = copy.copy(self.previous_hash)
             result = self.tp.get_stored_transactions()
             if len(result) == 0:
@@ -244,8 +259,7 @@ class ServerCore:
                 self.previous_hash = self.bm.get_hash(new_block.to_dict())
                 new_message = self.cm.get_message_text(MSG_NEW_BLOCK, json.dumps(new_block.to_dict()))
                 self.cm.send_all(new_message)
-
-                index = len(result)
+                index = len(new_tp)
                 self.tp.clear_my_transactions(index)
                 break
             else:
@@ -254,11 +268,11 @@ class ServerCore:
                 break
 
         with open("/usr/local/server/log.txt", "a") as f:
-            f.write("\nCurrent Blockchain is...\n{0}".format(self.bm.chain))
+            f.write("\nCurrent Blockchain length...\n{0}".format(len(self.bm.chain)))
             f.write("\nCurrent previous_hash is...{0}".format(self.previous_hash))
-        self.flag_stop_block_build = False
-        self.is_bb_running = False
-        self.bb_timer = threading.Timer(CHECK_INTERVAL, self.__generate_block_with_tp)
+        self.flag_stop_mining = False
+        self.bb_running = False
+        self.bb_timer = threading.Timer(CHECK_INTERVAL, self.__block_mining)
         self.bb_timer.start()
 
 

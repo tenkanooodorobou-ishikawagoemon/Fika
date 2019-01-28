@@ -14,6 +14,8 @@ from message_manager import (
     MSG_NEW_TRANSACTION,
     MSG_REQUEST_FULL_CHAIN,
     RSP_FULL_CHAIN,
+    MSG_REQUEST_LOG,
+    RSP_LOG,
     ERR_PROTOCOL_UNMATCH,
     ERR_VERSION_UNMATCH,
     OK_WITH_PAYLOAD,
@@ -59,10 +61,8 @@ class ConnectionManager4Client:
         while True:
             data = soc.recv(1024)
             data_sum = data_sum + data.decode()
-
             if not data:
                 break
-
         if not data_sum:
             return
 
@@ -77,7 +77,8 @@ class ConnectionManager4Client:
             print("Error: Protocol version is not matched")
             return
         elif status == ("OK", OK_WITHOUT_PAYLOAD):
-            return
+            if cmd == "RSP_LOG":
+                print(payload)
         elif status == ("OK", OK_WITH_PAYLOAD):
             self.callback((result, sender, reason, cmd, payload))
         else:

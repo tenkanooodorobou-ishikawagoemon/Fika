@@ -10,6 +10,8 @@ MSG_NEW_TRANSACTION = "NEW_TRANSACTION"
 MSG_NEW_BLOCK = "NEW_BLOCK"
 MSG_REQUEST_FULL_CHAIN = "REQUEST_FULL_CHAIN"
 RSP_FULL_CHAIN = "RSP_FULL_CHAIN"
+MSG_REQUEST_LOG = "REQUEST_LOG"
+RSP_LOG = "RSP_LOG"
 MSG_TEST = "TEST"
 
 ERR_PROTOCOL_UNMATCH = 0
@@ -31,13 +33,12 @@ class MessageManager:
             "sender": sender,
             "msg_type": msg_type,
         }
-
+        show_message = json.dumps(message, indent = 4)
         if payload is not None:
             message["payload"] = payload
-
-        return_message = json.dumps(message, indent = 4)
+        return_message = json.dumps(message)
         with open("/usr/local/server/log.txt", "a") as f:
-            f.write("\n{0}".format(return_message))
+            f.write("\n{0}".format(show_message))
         return return_message
 
     def parse(self, msg):

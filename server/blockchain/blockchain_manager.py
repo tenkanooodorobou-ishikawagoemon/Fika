@@ -22,6 +22,12 @@ class BlockchainManager:
         with self.lock:
             self.chain.append(block)
 
+    def get_my_blockchain(self):
+        if len(self.chain) > 1:
+            return self.chain
+        else:
+            return None
+
     def get_my_chain_length(self):
         return len(self.chain)
 
@@ -45,7 +51,19 @@ class BlockchainManager:
             current_index += 1
         return True
 
+    def is_valid_chain(self, chain):
+        last_block = chain[0]
+        current_index = 1
+        while current_index < len(chain):
+            block = chain[current_index]
+            if self.is_valid_block(self.get_hash(last_block), block) is not True:
+                return False
+            last_block = chain[current_index]
+            current_index += 1
+        return True
+
     def is_valid_block(self, previous_hash, block, difficulty = 5):
+        # Verification of Block
         suffix = "0" * difficulty
         block_4_pow = copy.deepcopy(block)
         nonce = block_4_pow["nonce"]
@@ -77,7 +95,7 @@ class BlockchainManager:
                 transactions = block["transactions"]
                 for t in transactions:
                     for t2 in transaction_pool:
-                        if t == json.dumps(t2):
+                        if t == t2:
                             with open("/usr/local/server/log.txt", "a") as f:
                                 f.write("\nalready exist in my blockchain: {0}".format(t2))
                             transaction_pool.remove(t2)
@@ -109,6 +127,19 @@ class BlockchainManager:
                 f.write("\ninvalid cahin cannot be set...")
             return None, []
 
+    def renew_my_blockchain(self, blockchain):
+        with open("usr/local/server/log.txt", "a") as f:
+            f.write("\nrenew_my_blockchain was called")
+        with self.lock:
+            if self.is_valid_chain(blockchain):
+                self.chain = blockchain
+                latest_block = self.chain[-1]
+                return self.get_hash(latest_block)
+            else:
+                with open("usr/local/server/log.txt", "a") as f:
+                    f.write("\ninvalid chain cannot be set...")
+                return None
+
     def has_this_output_in_my_chain(self, transaction_output):
         with open("/usr/local/server/log.txt", "a") as f:
             f.write("\nhas_this_output_in_my_chain was called")
@@ -122,11 +153,10 @@ class BlockchainManager:
             transactions = block["transactions"]
 
             for t in transactions:
-                if t["t_type"] == "basic" or t["t_type"] == "coinbase_transaction":
+                if t["t_type"] == "basic" or "coinbase_transaction":
                     if t["inputs"] != []:
                         inputs_t = t["inputs"]
                         for it in inputs_t:
-                            print(it["transaction"]["outputs"][it["output_index"]])
                             if it["transaction"]["outputs"][it["output_index"]] == transaction_output:
                                 with open("/usr/local/server/log.txt", "a") as f:
                                     f.write("\nthis Transaction was already used")
@@ -142,7 +172,7 @@ class BlockchainManager:
             block = self.chain[current_index]
             transactions = block["transactions"]
             for t in transactions:
-                if t["t_type"] == "basic" or t["t_type"] == "coinbase_transaction":
+                if t["t_type"] == "basic" or "coinbase_transaction":
                     outputs_t = t["outputs"]
                     for ot in outputs_t:
                         if ot == transaction_output:

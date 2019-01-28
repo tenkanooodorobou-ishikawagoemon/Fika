@@ -33,10 +33,10 @@ class RSAutil:
 
     def _get_pubkey_from_sbc_transation(self, transaction):
         print("_get_pubkey_from_sbc_transation was called")
-        input_t_list = transaction["inputs"]
+        inputs = transaction["inputs"]
         used_outputs = []
         sender_pubkey = ""
-        for i in input_t_list:
+        for i in inputs:
             idx = i["output_index"]
             tx = i["transaction"]["outputs"][idx]
             used_outputs.append(tx)

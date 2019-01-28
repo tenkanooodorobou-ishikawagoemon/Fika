@@ -1,5 +1,4 @@
 # coding: utf-8
-
 from time import time
 
 class Transaction:
@@ -7,7 +6,7 @@ class Transaction:
         self.inputs = inputs
         self.outputs = outputs
         self.timestamp = time()
-        self.tx_type = "basic"
+        self.t_type = "basic"
 
     def to_dict(self):
         d = {
@@ -42,7 +41,7 @@ class TransactionInput:
     def to_dict(self):
         d = {
         "transaction": self.transaction,
-        "output_index": self.output_index
+        "output_index": self.output_index,
         }
         return d
 
@@ -54,7 +53,7 @@ class TransactionOutput:
     def to_dict(self):
         d = {
         "recipient": self.recipient,
-        "value": self.value
+        "value": self.value,
         }
         return d
 
