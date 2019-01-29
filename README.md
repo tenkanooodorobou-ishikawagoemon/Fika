@@ -17,15 +17,27 @@ Fika ライブラリは FreeBSD の OS パーティショニング機能であ�
 上記の OS を用いて仮想マシンを作成する。
 4. 以下のコマンドを実行する  
 
-```FreeBSD
+```python:FreeBSD
 root@fika: portsnap fetch
 root@fika: portsnap extract
 root@fika: pkg install sysutils/ezjail
 root@fika: vi /usr/loca/etc/ezjail.conf
-
+# ezjail_jaildir = /usr/jails/ <- この行のコメントアウトを外し、ディレクトリを変更
+ezjail_jaildir = /jails
 root@fika: mkdir /jails
 root@fika: ezjail-admin install
+# server client 用の jail の雛形を作成
 root@fika: cp -pR /jails/flavours/example /jails/flavours/server
 root@fika: cp -pR /jails/flavours/example /jails/flavours/client
-root@fika:
+
+# PC から仮想マシン（FreeBSD）にファイル送信する
+yourpc username$ scp -r server client fika fika_pkg "hostname@<host address>:~"
+
+root@fika: cd /home/username
+# 先ほど作成した雛形にプログラムと pkg ファイルをコピーする
+root@fika: cp -r client /jails/flavours/client/usr/local
+root@fika: cp -r server /jails/flavours/server/usr/local
+root@fika: mv fika_pkg pkg
+root@fika: cp -r pkg /jails/flavours/server
+root@fika: cp -r pkg /jails/flavours/client
 ```  
