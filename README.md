@@ -15,4 +15,17 @@ Fika ライブラリは以下のように大きく 2 つのプログラ
 Fika ライブラリは FreeBSD の OS パーティショニング機能である jail とネットワーク仮想化機能 VIMAGE を操作する必要があるため、VIMAGE がデフォルトで備わっている **FreeBSD 12.0-RELEASE** を使用することを勧める。それ以前のバージョンを用いる場合はカーネルの再構築の必要がある。
 3. VirtualBox で新規マシン作成  
 上記の OS を用いて仮想マシンを作成する。
-4. 以下のコマンドを実行する
+4. 以下のコマンドを実行する  
+
+```FreeBSD
+root@fika: portsnap fetch
+root@fika: portsnap extract
+root@fika: pkg install sysutils/ezjail
+root@fika: vi /usr/loca/etc/ezjail.conf
+
+root@fika: mkdir /jails
+root@fika: ezjail-admin install
+root@fika: cp -pR /jails/flavours/example /jails/flavours/server
+root@fika: cp -pR /jails/flavours/example /jails/flavours/client
+root@fika:
+```  
